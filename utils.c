@@ -6,11 +6,29 @@
 /*   By: odahriz <odahriz@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/24 09:54:26 by odahriz           #+#    #+#             */
-/*   Updated: 2025/07/24 10:48:58 by odahriz          ###   ########.fr       */
+/*   Updated: 2025/07/31 11:53:35 by odahriz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philosophers.h"
+
+void	ft_sleep(t_data *data, unsigned long time)
+{
+	unsigned long	start;
+	unsigned long	elapsed;
+	unsigned long	sleep_time;
+
+	start = get_time();
+	elapsed = 0;
+	sleep_time = time;
+	while (elapsed < sleep_time)
+	{
+		if(is_dead(data))
+			return ;
+		usleep(100);
+		elapsed = get_time() - start;
+	}
+}
 
 int	ft_isdigit(const char *str)
 {
@@ -19,7 +37,7 @@ int	ft_isdigit(const char *str)
 	i = 0;
 	while (str[i])
 	{
-		if (str[i] < '0'|| str[i] > '9')
+		if (str[i] < '0' || str[i] > '9')
 			return (0);
 		i++;
 	}

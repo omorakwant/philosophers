@@ -1,6 +1,6 @@
 CC = cc
-CFLAGS = -Wall -Wextra -Werror
-SRCS = philosophers.c utils.c
+CFLAGS = -Wall -Wextra -Werror -g
+SRCS = philosophers.c utils.c philo_init.c routine.c print_data.c
 OBJS = $(SRCS:.c=.o)
 NAME = philo
 
@@ -18,5 +18,4 @@ clean:
 fclean: clean
 	rm -rf $(NAME)
 
-re: fclean
-	all
+re: fclean all
