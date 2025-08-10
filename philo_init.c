@@ -6,7 +6,7 @@
 /*   By: odahriz <odahriz@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/24 11:11:07 by odahriz           #+#    #+#             */
-/*   Updated: 2025/07/31 12:07:07 by odahriz          ###   ########.fr       */
+/*   Updated: 2025/08/05 15:37:38 by odahriz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,34 +20,44 @@ unsigned long	get_time(void)
 	return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
 }
 
+int	check_philosopher_death(t_data *data, unsigned int i)
+{
+	int	died;
+
+	died = 0;
+	pthread_mutex_lock(data[i].meals_mutex);
+	if (get_time() - data[i].last_eat > data[i].args.time_to_die)
+	{
+		pthread_mutex_unlock(data[i].meals_mutex);
+		set_dead(data, i);
+		pthread_mutex_lock(data->args.dead);
+		if (data->args.death == 1)
+			printf("%lu %d %s\n", get_time() - data[i].start_time,
+				data[i].id, "died");
+		pthread_mutex_unlock(data->args.dead);
+		died = 1;
+	}
+	else
+		pthread_mutex_unlock(data[i].meals_mutex);
+	return (died);
+}
+
 void	monitor(t_data *data)
 {
-	unsigned int i;
-	int 		die;
-	while(1)
+	unsigned int	i;
+
+	while (1)
 	{
 		i = 0;
-		while(i < data->args.number_of_philos)
+		while (i < data->args.number_of_philos)
 		{
-			pthread_mutex_lock(&data[i].meals);
-			if(data[i].last_eat > data[i].args.time_to_die)
-			{
-				pthread_mutex_unlock(&data[i].meals);
-				die = i;
-				i = 0;
-				while(i < data->args.number_of_philos)
-				{
-					pthread_mutex_lock(&data[i].args.dead);
-					data[i].args.death = 1;
-					pthread_mutex_unlock(&data[i].args.dead);
-					i++;
-				}
-				printf("%lu %d %s\n", get_time() - data[die].start_time, data->id, "died");
+			if (check_philosopher_death(data, i))
 				return ;
-			}
-			pthread_mutex_unlock(&data[i].meals);
 			i++;
 		}
+		if (all_eaten_enough(data))
+			return ;
+		usleep(1000);
 	}
 }
 
@@ -61,6 +71,7 @@ int	create_threads(t_data *data)
 	while (i < data->args.number_of_philos)
 	{
 		data[i].start_time = start_time;
+		data[i].last_eat = get_time();
 		pthread_create(&(data[i].thread), NULL, routine, &(data[i]));
 		i++;
 	}
@@ -81,14 +92,18 @@ pthread_mutex_t	*forks_init(t_data *data, t_philos_args *args)
 
 	(void)data;
 	forks = malloc(args->number_of_philos * sizeof(pthread_mutex_t));
+	if (!forks)
+		return (NULL);
 	i = 0;
 	while (i < args->number_of_philos)
 	{
 		if (pthread_mutex_init(&(forks[i]), NULL) != 0)
 		{
-			i--;
-			while (i >= 0)
-				pthread_mutex_destroy(&(forks[i--]));
+			while (i > 0)
+			{
+				i--;
+				pthread_mutex_destroy(&(forks[i]));
+			}
 			free(forks);
 			return (NULL);
 		}
@@ -97,29 +112,42 @@ pthread_mutex_t	*forks_init(t_data *data, t_philos_args *args)
 	return (forks);
 }
 
-void	philo_init(t_data *data, t_philos_args *args)
+void	init_philos_data(t_data *data, t_philos_args *args,
+		pthread_mutex_t *meals_mutex, pthread_mutex_t *forks)
 {
-	pthread_mutex_t	*forks;
 	unsigned int	i;
 
 	i = 0;
+	while (i < args->number_of_philos)
+	{
+		pthread_mutex_init(&meals_mutex[i], NULL);
+		data[i].id = i + 1;
+		data[i].meals_eaten = 0;
+		data[i].meals_mutex = &meals_mutex[i];
+		data[i].left_fork = &forks[i];
+		data[i].right_fork = &forks[(i + 1) % args->number_of_philos];
+		data[i].args = *args;
+		i++;
+	}
+}
+
+void	philo_init(t_data *data, t_philos_args *args)
+{
+	pthread_mutex_t	*forks;
+	pthread_mutex_t	*dead;
+	pthread_mutex_t	*meals_mutex;
+
 	if (!data)
 		return ;
 	forks = forks_init(data, args);
-	pthread_mutex_init(&args->dead, NULL);
-	pthread_mutex_init(&data->meals, NULL);
+	dead = malloc(sizeof(pthread_mutex_t));
+	meals_mutex = malloc(args->number_of_philos * sizeof(pthread_mutex_t));
+	if (!dead || !meals_mutex || !forks)
+		return ;
+	pthread_mutex_init(dead, NULL);
 	args->death = 0;
-	while (i < args->number_of_philos)
-	{
-		data[i].id = i + 1;
-		data[i].left_fork = &forks[(i + 1) % args->number_of_philos];
-		data[i].right_fork = &forks[i];
-		data[i].args.number_of_philos = args->number_of_philos;
-		data[i].args.time_to_die = args->time_to_die;
-		data[i].args.time_to_eat = args->time_to_eat;
-		data[i].args.time_to_sleep = args->time_to_sleep;
-		data[i].args.dead = args->dead;
-		i++;
-	}
+	args->dead = dead;
+	init_philos_data(data, args, meals_mutex, forks);
 	create_threads(data);
+	cleanup_resources(data, forks, meals_mutex);
 }

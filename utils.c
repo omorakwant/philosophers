@@ -6,11 +6,26 @@
 /*   By: odahriz <odahriz@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/24 09:54:26 by odahriz           #+#    #+#             */
-/*   Updated: 2025/07/31 11:53:35 by odahriz          ###   ########.fr       */
+/*   Updated: 2025/08/08 08:51:08 by odahriz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philosophers.h"
+
+void	set_dead(t_data *data, unsigned int i)
+{
+	unsigned int	j;
+
+	(void)i;
+	j = 0;
+	while (j < data->args.number_of_philos)
+	{
+		pthread_mutex_lock(data[j].args.dead);
+		data[j].args.death = 1;
+		pthread_mutex_unlock(data[j].args.dead);
+		j++;
+	}
+}
 
 void	ft_sleep(t_data *data, unsigned long time)
 {
@@ -23,7 +38,7 @@ void	ft_sleep(t_data *data, unsigned long time)
 	sleep_time = time;
 	while (elapsed < sleep_time)
 	{
-		if(is_dead(data))
+		if (is_dead(data))
 			return ;
 		usleep(100);
 		elapsed = get_time() - start;
@@ -46,9 +61,9 @@ int	ft_isdigit(const char *str)
 
 int	ft_atoi(const char *nptr)
 {
-	int	result;
-	int	sign;
-	int	i;
+	long	result;
+	int		sign;
+	int		i;
 
 	result = 0;
 	sign = 1;
@@ -61,7 +76,47 @@ int	ft_atoi(const char *nptr)
 	while (nptr[i] >= '0' && nptr[i] <= '9')
 	{
 		result = result * 10 + (nptr[i] - '0');
+		if (result > 2147483647)
+			return (0);
 		i++;
 	}
-	return (result * sign);
+	return ((int)(result * sign));
+}
+
+void	cleanup_resources(t_data *data, pthread_mutex_t *forks,
+		pthread_mutex_t *meals_mutex)
+{
+	unsigned int	i;
+
+	i = 0;
+	while (i < data->args.number_of_philos)
+	{
+		pthread_mutex_destroy(&forks[i]);
+		pthread_mutex_destroy(&meals_mutex[i]);
+		i++;
+	}
+	pthread_mutex_destroy(data->args.dead);
+	free(forks);
+	free(meals_mutex);
+	free(data->args.dead);
+}
+
+int	all_eaten_enough(t_data *data)
+{
+	unsigned int	i;
+	unsigned int	finished_eating;
+
+	if (data->args.n_of_eat == -1)
+		return (0);
+	i = 0;
+	finished_eating = 0;
+	while (i < data->args.number_of_philos)
+	{
+		pthread_mutex_lock(data[i].meals_mutex);
+		if (data[i].meals_eaten >= data->args.n_of_eat)
+			finished_eating++;
+		pthread_mutex_unlock(data[i].meals_mutex);
+		i++;
+	}
+	return (finished_eating == data->args.number_of_philos);
 }
