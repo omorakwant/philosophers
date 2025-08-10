@@ -27,6 +27,7 @@ typedef struct s_philos_args
 	unsigned int	time_to_sleep;
 	int				n_of_eat;
 	int				death;
+	int				all_ate;
 	pthread_mutex_t	*dead;
 }					t_philos_args;
 
@@ -36,6 +37,7 @@ typedef struct s_data
 	unsigned long	start_time;
 	unsigned long	last_eat;
 	int				meals_eaten;
+	int				finished;
 	pthread_mutex_t	*meals_mutex;
 	pthread_mutex_t	*left_fork;
 	pthread_mutex_t	*right_fork;
@@ -60,5 +62,12 @@ void				init_philos_data(t_data *data, t_philos_args *args,
 						pthread_mutex_t *meals_mutex, pthread_mutex_t *forks);
 int					check_philosopher_death(t_data *data, unsigned int i);
 void				is_sleep(t_data *data);
+int					should_stop_eating(t_data *data);
+pthread_mutex_t		*forks_init(t_data *data, t_philos_args *args);
+
+// forks.c
+void				take_forks(t_data *data);
+void				take_even_forks(t_data *data);
+void				take_odd_forks(t_data *data);
 
 #endif

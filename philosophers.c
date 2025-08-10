@@ -21,7 +21,7 @@ void	is_sleep(t_data *data)
 int	parse_arg(char **str, t_philos_args *args)
 {
 	args->number_of_philos = ft_atoi(str[1]);
-	if (args->number_of_philos <= 0)
+	if (args->number_of_philos <= 0 || args->number_of_philos > 200)
 		return (0);
 	args->time_to_die = ft_atoi(str[2]);
 	if (args->time_to_die <= 0)

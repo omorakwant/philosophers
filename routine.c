@@ -12,48 +12,12 @@
 
 #include "philosophers.h"
 
-void	take_even_forks(t_data *data)
-{
-	pthread_mutex_lock(data->right_fork);
-	print_data(get_time() - data->start_time, data, "has taken a fork");
-	if (data->args.number_of_philos == 1)
-	{
-		ft_sleep(data, data->args.time_to_die + 1);
-		pthread_mutex_unlock(data->right_fork);
-		return ;
-	}
-	pthread_mutex_lock(data->left_fork);
-	print_data(get_time() - data->start_time, data, "has taken a fork");
-}
-
-void	take_odd_forks(t_data *data)
-{
-	pthread_mutex_lock(data->left_fork);
-	print_data(get_time() - data->start_time, data, "has taken a fork");
-	if (data->args.number_of_philos == 1)
-	{
-		ft_sleep(data, data->args.time_to_die + 1);
-		pthread_mutex_unlock(data->left_fork);
-		return ;
-	}
-	pthread_mutex_lock(data->right_fork);
-	print_data(get_time() - data->start_time, data, "has taken a fork");
-}
-
-void	take_forks(t_data *data)
-{
-	if (data->id % 2 == 0)
-		take_even_forks(data);
-	else
-		take_odd_forks(data);
-}
-
 void	is_eat(t_data *data)
 {
+	print_data(get_time() - data->start_time, data, "is eating");
 	pthread_mutex_lock(data->meals_mutex);
 	data->last_eat = get_time();
 	pthread_mutex_unlock(data->meals_mutex);
-	print_data(get_time() - data->start_time, data, "is eating");
 	ft_sleep(data, data->args.time_to_eat);
 	pthread_mutex_lock(data->meals_mutex);
 	data->meals_eaten++;
@@ -70,6 +34,22 @@ void	is_eat(t_data *data)
 	}
 }
 
+int	should_stop_eating(t_data *data)
+{
+	if (data->args.n_of_eat != -1)
+	{
+		pthread_mutex_lock(data->meals_mutex);
+		if (data->meals_eaten >= data->args.n_of_eat)
+		{
+			data->finished = 1;
+			pthread_mutex_unlock(data->meals_mutex);
+			return (1);
+		}
+		pthread_mutex_unlock(data->meals_mutex);
+	}
+	return (0);
+}
+
 void	*routine(void *arg)
 {
 	t_data				*data;
@@ -79,16 +59,8 @@ void	*routine(void *arg)
 		usleep(100);
 	while (!is_dead(data))
 	{
-		if (data->args.n_of_eat != -1)
-		{
-			pthread_mutex_lock(data->meals_mutex);
-			if (data->meals_eaten >= data->args.n_of_eat)
-			{
-				pthread_mutex_unlock(data->meals_mutex);
-				break ;
-			}
-			pthread_mutex_unlock(data->meals_mutex);
-		}
+		if (should_stop_eating(data))
+			break ;
 		take_forks(data);
 		if (data->args.number_of_philos == 1)
 			break ;
