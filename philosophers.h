@@ -6,7 +6,7 @@
 /*   By: odahriz <odahriz@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/15 11:36:30 by odahriz           #+#    #+#             */
-/*   Updated: 2025/08/10 09:28:45 by odahriz          ###   ########.fr       */
+/*   Updated: 2025/08/12 11:08:32 by odahriz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,8 +64,6 @@ int					check_philosopher_death(t_data *data, unsigned int i);
 void				is_sleep(t_data *data);
 int					should_stop_eating(t_data *data);
 pthread_mutex_t		*forks_init(t_data *data, t_philos_args *args);
-
-// forks.c
 void				take_forks(t_data *data);
 void				take_even_forks(t_data *data);
 void				take_odd_forks(t_data *data);
